@@ -39,6 +39,7 @@
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 1rem;
   }
 
@@ -73,6 +74,41 @@
     margin-left: auto;
     letter-spacing: 0.04em;
   }
+
+  .about-panel {
+    flex-basis: 100%;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+
+  .about-panel summary {
+    cursor: pointer;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+  }
+
+  .about-panel summary::-webkit-details-marker { display: none; }
+
+  .about-panel summary::before {
+    content: "+";
+    color: var(--accent2);
+  }
+
+  .about-panel[open] summary::before { content: "-"; }
+
+  .about-panel p {
+    max-width: 860px;
+    margin: 0.6rem 0 0;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .about-panel strong { color: var(--text); font-weight: 500; }
 
   main {
     display: grid;
@@ -367,6 +403,8 @@
   }
 
   @media (max-width: 700px) {
+    header { align-items: flex-start; }
+    header p { margin-left: 0; flex-basis: 100%; }
     main { grid-template-columns: 1fr; }
     .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
     .previews-grid { grid-template-columns: 1fr; }
@@ -386,6 +424,13 @@
     <h1>PicPak Preview</h1>
   </div>
   <p>4-color e-ink simulator</p>
+  <details class="about-panel">
+    <summary>About this preview</summary>
+    <p>
+      PicPak Preview helps you adjust images before sending them to a PicPak by approximating the 4-color screen from the Kickstarter project. It is a work in progress and does not fully mimic the real device yet, but it tries to provide a useful preview.
+      <strong>No image data is sent to any server.</strong> Uploads, adjustments, and rendering all happen directly in your browser on the client side.
+    </p>
+  </details>
 </header>
 
 <main>
