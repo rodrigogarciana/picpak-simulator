@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PicPak Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --text: #e8e4dc;
+    --muted: #888;
+    --accent: #c8341a;
+    --accent2: #d4a017;
+    --white: #f5f0e8;
+    --radius: 10px;
+    --font: 'DM Mono', 'Courier New', monospace;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .palette-swatch {
+    display: flex;
+    gap: 3px;
+  }
+
+  .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+  }
+
+  header h1 {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  header p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    letter-spacing: 0.04em;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    flex: 1;
+    gap: 0;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+    height: 100%;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .drop-zone {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 12px;
+    transition: border-color 0.15s, background 0.15s;
+    line-height: 1.6;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(200, 52, 26, 0.05);
+    color: var(--text);
+  }
+
+  .drop-zone input { display: none; }
+
+  .drop-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .ctrl-group { display: flex; flex-direction: column; gap: 10px; }
+
+  .ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .ctrl-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .ctrl-header label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  .ctrl-header .val {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover { background: var(--accent2); }
+
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: var(--font);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+
+  .btn:hover { border-color: var(--text); color: var(--text); }
+  .btn.active { background: var(--surface2); border-color: var(--text); color: var(--text); }
+  .btn.primary { border-color: var(--accent); color: var(--accent); }
+  .btn.primary:hover { background: var(--accent); color: var(--white); }
+
+  .orientation-row { display: flex; gap: 6px; }
+
+  .orient-btn {
+    font-family: var(--font);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 5px 0;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    flex: 1;
+    text-align: center;
+    transition: all 0.1s;
+  }
+
+  .orient-btn:hover { border-color: var(--text); color: var(--text); }
+  .orient-btn.active { background: var(--surface2); border-color: var(--accent2); color: var(--accent2); }
+
+  .canvas-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    padding: 1.25rem;
+    gap: 1rem;
+    background: var(--bg);
+    overflow: hidden;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .info-bar-wrap { grid-column: 1 / -1; }
+
+  .crop-col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .preview-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    gap: 0.5rem;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    min-height: 300px;
+  }
+
+  .preview-card { display: flex; flex-direction: column; gap: 8px; }
+
+  .preview-card-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .preview-card-label .dims { font-size: 10px; color: var(--border); }
+
+  .canvas-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: transparent;
+    line-height: 0;
+  }
+
+  .canvas-wrap canvas {
+    width: 100%;
+    height: auto;
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  .preview-col .preview-card {
+    max-width: 45vh;
+  }
+
+  .crop-wrap {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius);
+    cursor: crosshair;
+    border: 1px solid var(--border);
+    line-height: 0;
+    background: repeating-conic-gradient(#222 0% 25%, #1a1a1a 0% 50%) 0 0 / 16px 16px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .crop-wrap canvas { width: 100%; height: 100%; object-fit: contain; display: block; max-height: 100%; }
+
+  .crop-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    border: 1.5px solid var(--accent2);
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+    pointer-events: none;
+  }
+
+  .crop-handle {
+    position: absolute;
+    width: 100%;
+    top: 0; left: 0;
+  }
+
+  .dl-bar {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 900px;
+    justify-content: flex-end;
+  }
+
+  .info-bar {
+    display: flex;
+    gap: 16px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 11px;
+    color: var(--muted);
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .info-bar span { color: var(--text); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+  }
+
+  .crop-section { margin-top: 0.5rem; }
+
+  #cropCanvas { width: 100%; display: block; cursor: crosshair; }
+
+  .crop-instruction {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .previews-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="palette-swatch">
+      <div class="swatch" style="background:#1a1a1a; border:1px solid #333;"></div>
+      <div class="swatch" style="background:#f5f0e8;"></div>
+      <div class="swatch" style="background:#c8341a;"></div>
+      <div class="swatch" style="background:#d4a017;"></div>
+    </div>
+    <h1>PicPak Preview</h1>
+  </div>
+  <p>4-color e-ink simulator</p>
+</header>
+
+<main>
+  <aside class="sidebar">
+
+    <div>
+      <div class="section-label">Image</div>
+      <div class="drop-zone" id="dropZone">
+        <span class="drop-icon">⬆</span>
+        Drop image or click to upload<br>
+        <span style="font-size:10px; opacity:0.6;">JPG · PNG · WebP</span>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+    </div>
+
+    <div id="cropSection" style="display:none;">
+      <div class="section-label">Crop &amp; orientation</div>
+      <div class="orientation-row" style="margin-bottom:10px;">
+        <button class="orient-btn active" id="btnH" onclick="setOrientation('h')">&#9633; Horizontal<br><span style="font-size:9px; opacity:0.6;">800 × 600</span></button>
+        <button class="orient-btn" id="btnV" onclick="setOrientation('v')">&#9645; Vertical<br><span style="font-size:9px; opacity:0.6;">600 × 800</span></button>
+      </div>
+      <p class="crop-instruction">Drag to reposition. Scroll or use slider to zoom.</p>
+      <div class="ctrl" style="margin-top:10px;">
+        <div class="ctrl-header"><label>Zoom</label><span class="val" id="zoomVal">1.0×</span></div>
+        <input type="range" id="zoomSlider" min="100" max="400" step="1" value="100">
+      </div>
+    </div>
+
+    <div id="adjustSection" style="display:none;">
+      <div class="section-label">Preprocess</div>
+      <div class="ctrl-group">
+        <div class="ctrl">
+          <div class="ctrl-header"><label>Contrast</label><span class="val" id="contrastVal">0</span></div>
+          <input type="range" id="contrast" min="-100" max="100" step="1" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-header"><label>Brightness</label><span class="val" id="brightVal">0</span></div>
+          <input type="range" id="brightness" min="-100" max="100" step="1" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-header"><label>Saturation</label><span class="val" id="satVal">0</span></div>
+          <input type="range" id="saturation" min="-100" max="100" step="1" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-header"><label>Warmth shift</label><span class="val" id="warmVal">0</span></div>
+          <input type="range" id="warmth" min="-100" max="100" step="1" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl-header"><label>Sharpen</label><span class="val" id="sharpVal">0</span></div>
+          <input type="range" id="sharpen" min="0" max="100" step="1" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div id="ditherSection" style="display:none;">
+      <div class="section-label">Mode</div>
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn" id="bwToggle" onclick="toggleBW()">B&amp;W</button>
+      </div>
+      <div class="section-label">Transparent fill</div>
+      <div class="btn-row">
+        <button class="btn active" id="fillWhiteBtn" onclick="setTransparentFill('white')">White</button>
+        <button class="btn" id="fillBlackBtn" onclick="setTransparentFill('black')">Black</button>
+      </div>
+    </div>
+
+    <div id="exportSection" style="display:none;">
+      <div class="section-label">Export</div>
+      <div class="btn-row">
+        <button class="btn" onclick="downloadDithered()">↓ Download dithered</button>
+        <button class="btn primary" onclick="downloadCropped()">↓ Download cropped</button>
+      </div>
+      <p style="font-size:10px; color:var(--muted); margin-top:8px; line-height:1.6;">Dithered = full e-ink simulation at export size.<br>Cropped = preprocessed only, for Pixelmator.</p>
+    </div>
+
+  </aside>
+
+  <section class="canvas-area" id="canvasArea">
+    <div class="empty-state" id="emptyState">
+      <span style="font-size:32px; opacity:0.3;">◫</span>
+      <span>Upload an image to begin</span>
+    </div>
+
+    <div class="info-bar-wrap" id="infoBarWrap" style="display:none;">
+      <div class="info-bar" id="infoBar">
+        <div>Source <span id="infoSrc">—</span></div>
+        <div>Export <span id="infoExport">—</span></div>
+        <div>Orientation <span id="infoOrient">—</span></div>
+      </div>
+    </div>
+
+    <div class="crop-col" id="cropCol" style="display:none;">
+      <div class="preview-card-label">
+        Crop — drag &amp; scroll to zoom
+        <span class="dims" id="cropDims"></span>
+      </div>
+      <div class="crop-wrap" id="cropWrap">
+        <canvas id="cropCanvas"></canvas>
+        <div class="crop-overlay" id="cropOverlay"></div>
+      </div>
+    </div>
+
+    <div class="preview-col" id="previewCol" style="display:none;">
+      <div class="preview-card">
+        <div class="preview-card-label">Preprocessed <span class="dims" id="preDims"></span></div>
+        <div class="canvas-wrap"><canvas id="srcCanvas"></canvas></div>
+      </div>
+      <div class="preview-card">
+        <div class="preview-card-label">PicPak simulation <span class="dims" id="dstDims"></span></div>
+        <div class="canvas-wrap"><canvas id="dstCanvas"></canvas></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+// Calibrated to real PicPak screen from photo reference
+const PALETTE = [
+  [22, 20, 20],    // black  — deep neutral
+  [238, 236, 232], // white  — near-pure, very slight warm
+  [148, 60, 48],   // red    — muted terracotta, less orange
+  [168, 140, 72]   // yellow — kept subtle, doesn't dominate
+];
+
+const BAYER4 = [
+  [ 0, 8, 2,10],
+  [12, 4,14, 6],
+  [ 3,11, 1, 9],
+  [15, 7,13, 5]
+];
+
+let originalImage = null;
+let orientation = 'h';
+let algo = 'floyd';
+let cropX = 0, cropY = 0;
+let zoomLevel = 1.0;
+let isDragging = false, dragStartX = 0, dragStartY = 0, cropStartX = 0, cropStartY = 0;
+let debounceTimer = null;
+let sourceW = 0, sourceH = 0;
+
+const exportSizes = { h: [800, 600], v: [600, 800] };
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const cropCanvas = document.getElementById('cropCanvas');
+const cropOverlay = document.getElementById('cropOverlay');
+const srcCanvas = document.getElementById('srcCanvas');
+const dstCanvas = document.getElementById('dstCanvas');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+document.querySelectorAll('[data-algo]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-algo]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    algo = btn.dataset.algo;
+
+    scheduleRender();
+  });
+});
+
+['contrast','brightness','saturation','warmth','sharpen'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    const map = {contrast:'contrastVal', brightness:'brightVal', saturation:'satVal', warmth:'warmVal', sharpen:'sharpVal'};
+    document.getElementById(map[id]).textContent = this.value;
+    scheduleRender();
+  });
+});
+
+function setOrientation(o) {
+  orientation = o;
+  document.getElementById('btnH').classList.toggle('active', o === 'h');
+  document.getElementById('btnV').classList.toggle('active', o === 'v');
+  zoomLevel = 1.0;
+  document.getElementById('zoomSlider').value = 100;
+  document.getElementById('zoomVal').textContent = '1.0×';
+  resetCrop();
+  scheduleRender();
+  document.getElementById('infoOrient').textContent = o === 'h' ? 'Horizontal (800×600)' : 'Vertical (600×800)';
+  document.getElementById('infoExport').textContent = o === 'h' ? '800 × 600' : '600 × 800';
+}
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+  img.onload = () => {
+    originalImage = img;
+    sourceW = img.width;
+    sourceH = img.height;
+    URL.revokeObjectURL(url);
+    document.getElementById('infoSrc').textContent = `${img.width} × ${img.height}`;
+    document.getElementById('infoOrient').textContent = 'Horizontal (800×600)';
+    document.getElementById('infoExport').textContent = '800 × 600';
+
+    zoomLevel = 1.0;
+    document.getElementById('zoomSlider').value = 100;
+    document.getElementById('zoomVal').textContent = '1.0×';
+    ['cropSection','adjustSection','ditherSection','exportSection'].forEach(id => {
+      document.getElementById(id).style.display = 'block';
+    });
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('infoBarWrap').style.display = 'block';
+    document.getElementById('cropCol').style.display = 'flex';
+    document.getElementById('previewCol').style.display = 'flex';
+    drawCropCanvas();
+    resetCrop();
+    scheduleRender();
+  };
+  img.src = url;
+}
+
+function clampCrop() {
+  const [cw, ch] = getCropSize();
+  cropX = Math.max(0, Math.min(sourceW - cw, cropX));
+  cropY = Math.max(0, Math.min(sourceH - ch, cropY));
+}
+
+function setZoom(z) {
+  zoomLevel = Math.min(4, Math.max(1, z));
+  document.getElementById('zoomSlider').value = Math.round(zoomLevel * 100);
+  document.getElementById('zoomVal').textContent = zoomLevel.toFixed(1) + '×';
+  clampCrop();
+  updateCropOverlay();
+  scheduleRender();
+}
+
+document.getElementById('zoomSlider').addEventListener('input', function() {
+  setZoom(parseFloat(this.value) / 100);
+});
+
+document.getElementById('cropWrap').addEventListener('wheel', e => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.1 : 0.1;
+  setZoom(zoomLevel + delta);
+}, { passive: false });
+
+function drawCropCanvas() {
+  const wrap = document.getElementById('cropWrap');
+  const maxW = wrap.clientWidth || 860;
+  const scale = Math.min(1, maxW / sourceW);
+  cropCanvas.width = Math.round(sourceW * scale);
+  cropCanvas.height = Math.round(sourceH * scale);
+  const ctx = cropCanvas.getContext('2d');
+  ctx.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+}
+
+function resetCrop() {
+  if (!originalImage) return;
+  const [tw, th] = exportSizes[orientation];
+  const aspect = tw / th;
+  if (sourceW / sourceH > aspect) {
+    cropY = 0;
+    const cropW = Math.round(sourceH * aspect);
+    cropX = Math.round((sourceW - cropW) / 2);
+  } else {
+    cropX = 0;
+    const cropH = Math.round(sourceW / aspect);
+    cropY = Math.round((sourceH - cropH) / 2);
+  }
+  updateCropOverlay();
+}
+
+function getCropSize() {
+  const [tw, th] = exportSizes[orientation];
+  const aspect = tw / th;
+  let baseCw, baseCh;
+  if (sourceW / sourceH > aspect) {
+    baseCh = sourceH;
+    baseCw = Math.round(baseCh * aspect);
+  } else {
+    baseCw = sourceW;
+    baseCh = Math.round(baseCw / aspect);
+  }
+  const cw = Math.round(baseCw / zoomLevel);
+  const ch = Math.round(baseCh / zoomLevel);
+  return [cw, ch];
+}
+
+function updateCropOverlay() {
+  const [cw, ch] = getCropSize();
+  const scaleX = cropCanvas.width / sourceW;
+  const scaleY = cropCanvas.height / sourceH;
+  const ox = Math.round(cropX * scaleX);
+  const oy = Math.round(cropY * scaleY);
+  const ow = Math.round(cw * scaleX);
+  const oh = Math.round(ch * scaleY);
+  cropOverlay.style.left = ox + 'px';
+  cropOverlay.style.top = oy + 'px';
+  cropOverlay.style.width = ow + 'px';
+  cropOverlay.style.height = oh + 'px';
+  document.getElementById('cropDims').textContent = `${cw} × ${ch} → ${exportSizes[orientation][0]} × ${exportSizes[orientation][1]}`;
+}
+
+cropCanvas.addEventListener('mousedown', e => {
+  isDragging = true;
+  const rect = cropCanvas.getBoundingClientRect();
+  dragStartX = e.clientX - rect.left;
+  dragStartY = e.clientY - rect.top;
+  cropStartX = cropX;
+  cropStartY = cropY;
+});
+
+window.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const rect = cropCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const scaleX = sourceW / cropCanvas.width;
+  const scaleY = sourceH / cropCanvas.height;
+  const dx = (mx - dragStartX) * scaleX;
+  const dy = (my - dragStartY) * scaleY;
+  const [cw, ch] = getCropSize();
+  cropX = Math.max(0, Math.min(sourceW - cw, cropStartX + dx));
+  cropY = Math.max(0, Math.min(sourceH - ch, cropStartY + dy));
+  updateCropOverlay();
+  scheduleRender();
+});
+
+window.addEventListener('mouseup', () => { isDragging = false; });
+
+cropCanvas.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  isDragging = true;
+  const rect = cropCanvas.getBoundingClientRect();
+  dragStartX = t.clientX - rect.left;
+  dragStartY = t.clientY - rect.top;
+  cropStartX = cropX; cropStartY = cropY;
+}, {passive:true});
+
+window.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const t = e.touches[0];
+  const rect = cropCanvas.getBoundingClientRect();
+  const mx = t.clientX - rect.left;
+  const my = t.clientY - rect.top;
+  const scaleX = sourceW / cropCanvas.width;
+  const scaleY = sourceH / cropCanvas.height;
+  const dx = (mx - dragStartX) * scaleX;
+  const dy = (my - dragStartY) * scaleY;
+  const [cw, ch] = getCropSize();
+  cropX = Math.max(0, Math.min(sourceW - cw, cropStartX + dx));
+  cropY = Math.max(0, Math.min(sourceH - ch, cropStartY + dy));
+  updateCropOverlay();
+  scheduleRender();
+}, {passive:true});
+
+window.addEventListener('touchend', () => { isDragging = false; });
+
+let bwMode = false;
+let transparentFill = 'white'; // 'white' or 'black'
+function toggleBW() {
+  bwMode = !bwMode;
+  document.getElementById('bwToggle').classList.toggle('active', bwMode);
+  scheduleRender();
+}
+
+function setTransparentFill(fill) {
+  transparentFill = fill;
+  document.getElementById('fillWhiteBtn').classList.toggle('active', fill === 'white');
+  document.getElementById('fillBlackBtn').classList.toggle('active', fill === 'black');
+  scheduleRender();
+}
+
+function scheduleRender() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(render, 40);
+}
+
+function getSlider(id) { return parseFloat(document.getElementById(id).value); }
+
+function getCroppedImageData() {
+  const [tw, th] = exportSizes[orientation];
+  const [cw, ch] = getCropSize();
+  const offscreen = document.createElement('canvas');
+  offscreen.width = tw;
+  offscreen.height = th;
+  const ctx = offscreen.getContext('2d');
+  ctx.drawImage(originalImage, cropX, cropY, cw, ch, 0, 0, tw, th);
+  return ctx.getImageData(0, 0, tw, th);
+}
+
+function applyPreprocess(imageData) {
+  const contrast = getSlider('contrast') / 100;
+  const saturation = (getSlider('saturation') + 100) / 100;
+  const brightness = getSlider('brightness') / 100;
+  const warmth = getSlider('warmth') / 100;
+  const sharpen = getSlider('sharpen') / 100;
+  const d = new Uint8ClampedArray(imageData.data);
+  const w = imageData.width, h = imageData.height;
+
+  for (let i = 0; i < d.length; i += 4) {
+    let r = d[i]/255, g = d[i+1]/255, b = d[i+2]/255;
+    r += brightness; g += brightness; b += brightness;
+    r = (r - 0.5) * (1 + contrast) + 0.5;
+    g = (g - 0.5) * (1 + contrast) + 0.5;
+    b = (b - 0.5) * (1 + contrast) + 0.5;
+    const gray = 0.299*r + 0.587*g + 0.114*b;
+    r = gray + (r - gray) * saturation;
+    g = gray + (g - gray) * saturation;
+    b = gray + (b - gray) * saturation;
+    if (warmth > 0) { r += warmth*0.15; b -= warmth*0.15; }
+    else { r += warmth*0.1; b -= warmth*0.1; }
+    d[i]   = Math.min(255, Math.max(0, r*255));
+    d[i+1] = Math.min(255, Math.max(0, g*255));
+    d[i+2] = Math.min(255, Math.max(0, b*255));
+  }
+
+  if (bwMode) {
+    for (let i = 0; i < d.length; i += 4) {
+      const g = Math.round(0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]);
+      d[i] = g; d[i+1] = g; d[i+2] = g;
+    }
+  }
+
+  if (sharpen > 0.01) {
+    const src = new Uint8ClampedArray(d);
+    const kernel = [-1,-1,-1,-1,8+1/sharpen,-1,-1,-1,-1];
+    const factor = sharpen * 0.5;
+    for (let y = 1; y < h-1; y++) {
+      for (let x = 1; x < w-1; x++) {
+        const idx = (y*w+x)*4;
+        for (let c = 0; c < 3; c++) {
+          let sum = 0;
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              sum += src[((y+ky)*w+(x+kx))*4+c] * kernel[(ky+1)*3+(kx+1)];
+            }
+          }
+          d[idx+c] = Math.min(255, Math.max(0, src[idx+c] + sum * factor * 0.1));
+        }
+      }
+    }
+  }
+
+  return d;
+}
+
+function nearestColor(r, g, b) {
+  let best = 0, bestDist = Infinity;
+  for (let i = 0; i < PALETTE.length; i++) {
+    const [pr,pg,pb] = PALETTE[i];
+    const dr=r-pr, dg=g-pg, db=b-pb;
+    const dist = dr*dr*0.299 + dg*dg*0.587 + db*db*0.114;
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  }
+  return PALETTE[best];
+}
+
+function dither(processed, w, h) {
+  const buf = [];
+  for (let i = 0; i < processed.length; i += 4) {
+    buf.push([processed[i], processed[i+1], processed[i+2]]);
+  }
+  const raw = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y*w+x;
+      const [or,og,ob] = buf[idx];
+      const [nr,ng,nb] = nearestColor(or,og,ob);
+      const oi = idx*4;
+      raw[oi]=nr; raw[oi+1]=ng; raw[oi+2]=nb; raw[oi+3]=255;
+      const er=or-nr, eg=og-ng, eb=ob-nb;
+      for (const [dy,dx,f] of [[0,1,7/16],[1,-1,3/16],[1,0,5/16],[1,1,1/16]]) {
+        const ny=y+dy, nx=x+dx;
+        if (ny>=0&&ny<h&&nx>=0&&nx<w) {
+          const ni=ny*w+nx;
+          buf[ni][0]=Math.min(255,Math.max(0,buf[ni][0]+er*f));
+          buf[ni][1]=Math.min(255,Math.max(0,buf[ni][1]+eg*f));
+          buf[ni][2]=Math.min(255,Math.max(0,buf[ni][2]+eb*f));
+        }
+      }
+    }
+  }
+  // Blend 10% toward neutral mid — real PicPak has reasonable contrast
+  const FADE = 0.10;
+  const MID  = 128;
+  const out = new Uint8ClampedArray(raw.length);
+  for (let i = 0; i < raw.length; i += 4) {
+    out[i]   = Math.round(raw[i]   * (1-FADE) + MID * FADE);
+    out[i+1] = Math.round(raw[i+1] * (1-FADE) + MID * FADE);
+    out[i+2] = Math.round(raw[i+2] * (1-FADE) + MID * FADE);
+    // Preserve alpha from source so transparent pixels stay transparent
+    out[i+3] = processed[i+3];
+  }
+  return out;
+}
+
+function render() {
+  if (!originalImage) return;
+  const [tw, th] = exportSizes[orientation];
+  const croppedData = getCroppedImageData();
+  const processed = applyPreprocess(croppedData);
+
+  // Preprocessed: draw transparent pixels as-is (checkerboard shows through)
+  srcCanvas.width = tw; srcCanvas.height = th;
+  const srcCtx = srcCanvas.getContext('2d');
+  srcCtx.clearRect(0, 0, tw, th);
+  srcCtx.putImageData(new ImageData(new Uint8ClampedArray(processed), tw, th), 0, 0);
+  document.getElementById('preDims').textContent = `${tw} × ${th}`;
+
+  // Simulation: dither at full res, apply pre-blur to lose fine detail like real PicPak
+  const dithered = dither(processed, tw, th);
+
+  const dithOff = document.createElement('canvas');
+  dithOff.width = tw; dithOff.height = th;
+  const dithCtx = dithOff.getContext('2d');
+  dithCtx.fillStyle = transparentFill === 'black' ? '#1e1c1c' : '#e4e2e0';
+  dithCtx.fillRect(0, 0, tw, th);
+  const pixOff = document.createElement('canvas');
+  pixOff.width = tw; pixOff.height = th;
+  pixOff.getContext('2d').putImageData(new ImageData(dithered, tw, th), 0, 0);
+  dithCtx.drawImage(pixOff, 0, 0);
+
+  dstCanvas.width = tw; dstCanvas.height = th;
+  const dstCtx = dstCanvas.getContext('2d');
+  dstCtx.clearRect(0, 0, tw, th);
+  dstCtx.drawImage(dithOff, 0, 0);
+  document.getElementById('dstDims').textContent = `${tw} × ${th}`;
+}
+
+function exportWithFill(sourceCanvas) {
+  const off = document.createElement('canvas');
+  off.width = sourceCanvas.width; off.height = sourceCanvas.height;
+  const ctx = off.getContext('2d');
+  ctx.fillStyle = transparentFill === 'black' ? '#161414' : '#eceae6';
+  ctx.fillRect(0, 0, off.width, off.height);
+  ctx.drawImage(sourceCanvas, 0, 0);
+  return off.toDataURL('image/png');
+}
+
+function downloadDithered() {
+  const link = document.createElement('a');
+  link.download = `picpak-dithered-${orientation}-${Date.now()}.png`;
+  link.href = exportWithFill(dstCanvas);
+  link.click();
+}
+
+function downloadCropped() {
+  const link = document.createElement('a');
+  link.download = `picpak-cropped-${orientation}-${Date.now()}.png`;
+  link.href = exportWithFill(srcCanvas);
+  link.click();
+}
+
+window.addEventListener('resize', () => {
+  if (originalImage) { drawCropCanvas(); updateCropOverlay(); }
+});
+</script>
+</body>
+</html>
